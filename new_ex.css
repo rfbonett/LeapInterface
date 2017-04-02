@@ -1,0 +1,15 @@
+iframe {
+  width: 90%;
+  height: 90%;
+}
+
+.item {
+  text-align: center;
+}
+
+#tracker {
+  position: absolute;
+  width: 5%;
+  height: 5%;
+  z-index: 1;
+}

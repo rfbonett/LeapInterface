@@ -1,0 +1,107 @@
+<html>
+<head>
+  <link href="new_ex.css" rel="stylesheet"/>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://js.leapmotion.com/leap-0.6.4.min.js"></script>
+</head>
+<body>
+  <div id="tracker">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="100"/>
+    </svg>
+  </div>
+  <div id="myCarousel" class="carousel slide" data-ride="carousel" data-interval="false">
+    <!-- Wrapper for slides -->
+    <div class="carousel-inner" role="listbox">
+      <div class="item active">
+				<iframe width="100%" height="100%" src="http://tribehacks.com" frameborder="0" allowfullscreen=""></iframe>
+			</div>
+			<div class="item">
+				<iframe width="100%" height="100%" src="http://wm.acm.org" frameborder="0" allowfullscreen=""></iframe>
+			</div>
+			<div class="item">
+				<iframe width="100%" height="100%" src="http://tribehacks.com/2016/tribeHacksII" frameborder="0" allowfullscreen=""></iframe>
+			</div>
+    </div>
+  </div>
+  <!-- Indicators -->
+  <div>
+    <ol class="carousel-indicators">
+      <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+      <li data-target="#myCarousel" data-slide-to="1"></li>
+      <li data-target="#myCarousel" data-slide-to="2"></li>
+    </ol>
+  </div>
+</body>
+
+<script>
+  $(".carousel-indicators li").on('click', function(){
+      $(this).siblings().removeClass('active')
+      $(this).addClass('active');
+  })
+</script>
+<script>
+var screenWidth;
+var screenHeight;
+var lmpos = [0, 0, 0];
+
+var tracker = document.getElementById("tracker");
+var num = 0;
+var controller = Leap.loop({enableGestures: true}, function(frame){
+  num++;
+  if (frame.valid && (num % 5) == 0) {
+    if (frame.hands != null && frame.hands.length > 0) {
+      var finger = frame.hands[0].indexFinger;
+      if (finger != null && finger.valid) {
+        var pos = finger.stabilizedTipPosition;
+        var dip = finger.carpPosition;
+        var dir = [0, 0, 0];
+        var x = 0;
+        while (x < pos.length) {
+          pos[x] = Math.round(pos[x], 0);
+          dip[x] = Math.round(dip[x], 0);
+          dir[x] = pos[x] - dip[x];
+          x++;
+        }
+        console.log("Position: " + pos.toString());
+        console.log("Direction: " + dir.toString());
+
+        tracker.style.left = pos[0];
+        tracker.style.top = pos[1];
+      }
+    }
+  }
+if(frame.valid && frame.gestures.length > 0){
+  frame.gestures.forEach(function(gesture){
+      switch (gesture.type){
+        case "circle":
+            console.log("Circle Gesture");
+            break;
+        case "keyTap":
+            console.log("Key Tap Gesture");
+            break;
+        case "screenTap":
+            console.log("Screen Tap Gesture");
+            //document.elementFromPoint(gesture., y).click();
+
+            break;
+        case "swipe":
+            console.log("Swipe Gesture");
+            var isHorizontal = Math.abs(gesture.direction[0]) > Math.abs(gesture.direction[1]);
+            if (isHorizontal) {
+                if (gesture.direction[0] <= 0) {
+                  $("#myCarousel").carousel("next");
+                }
+                else {
+                  $('#myCarousel').carousel("prev");
+                }
+            }
+            break;
+      }
+  });
+}
+});
+</script>
+</html>
