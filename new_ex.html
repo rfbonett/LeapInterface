@@ -43,36 +43,88 @@
   })
 </script>
 <script>
-var screenWidth;
-var screenHeight;
-var lmpos = [0, 0, 0];
+function roundVec3(vec) {
+  var x = 0;
+  while (x < vec.length) {
+    vec[x] = Math.round(vec[x], 0);
+    x++;
+  }
+  return vec;
+}
+
+function dotVec3(a, b) {
+  var i = 0;
+  var prod = 0;
+  while (i < a.length) {
+    prod += a[i] * b[i];
+    i++;
+  }
+  return prod;
+}
+
+function scaleVec3(vec, s) {
+  var out = [vec[0] * s, vec[1] * s, vec[2] * s];
+  return out;
+}
+
+function sumVec3(a, b) {
+  var out = [0, 0, 0];
+  var i = 0;
+  while (i < a.length) {
+    out[i] += a[i] + b[i];
+    i++;
+  }
+  return out;
+}
+
+function intersectRayPlane(origin, direction, normal, dist) {
+  var denom = dotVec3(direction, normal);
+  if (denom !== 0) {
+      var t = -(dotVec3(origin, normal) + dist) / denom;
+      var scaled = scaleVec3(direction, t);
+      return sumVec3(origin, scaled);
+  }
+  else if (dotVec3(normal, origin) + dist === 0) {
+      return origin;
+  }
+  return null;
+}
+
+function pointing(hand) {
+    return hand.indexFinger.extended;
+}
+
+var scrollUp = (function () {
+  var timerId; // stored timer in case you want to use clearInterval later
+
+  return function (height, times, element) {
+    var i = 0; // a simple counter
+    timerId = setInterval(function () {
+      if (i > times) // if the last frame is reached, set counter to zero
+        i = 0;
+      element.style.backgroundPosition = "0px -" + i * height + 'px'; //scroll up
+      i++;
+    }, 10); // every 10 milliseconds
+  };
+})();
+
+var screenWidth = 350;
+var screenHeight = 230;
+var widthPx = $(window).width();
+var heightPx = $(window).height();
+var widthRatio = widthPx / screenWidth;
+var heightRatio = heightPx / screenHeight;
+var lmpos = [175, 0, 250];
+var norm = [0, 0, 1]
+var dist = 0;
 
 var tracker = document.getElementById("tracker");
+var trackerPx = 10;
+
+var tapping = false;
 var num = 0;
 var controller = Leap.loop({enableGestures: true}, function(frame){
   num++;
-  if (frame.valid && (num % 5) == 0) {
-    if (frame.hands != null && frame.hands.length > 0) {
-      var finger = frame.hands[0].indexFinger;
-      if (finger != null && finger.valid) {
-        var pos = finger.stabilizedTipPosition;
-        var dip = finger.carpPosition;
-        var dir = [0, 0, 0];
-        var x = 0;
-        while (x < pos.length) {
-          pos[x] = Math.round(pos[x], 0);
-          dip[x] = Math.round(dip[x], 0);
-          dir[x] = pos[x] - dip[x];
-          x++;
-        }
-        console.log("Position: " + pos.toString());
-        console.log("Direction: " + dir.toString());
-
-        tracker.style.left = pos[0];
-        tracker.style.top = pos[1];
-      }
-    }
-  }
 if(frame.valid && frame.gestures.length > 0){
   frame.gestures.forEach(function(gesture){
       switch (gesture.type){
@@ -84,8 +136,15 @@ if(frame.valid && frame.gestures.length > 0){
             break;
         case "screenTap":
             console.log("Screen Tap Gesture");
-            //document.elementFromPoint(gesture., y).click();
-
+            tapping = true;
+            var x = parseInt(tracker.style.left.slice(0, -2));
+            var y = parseInt(tracker.style.top.slice(0, -2));
+            var el = document.elementFromPoint(x, y);
+            if (el instanceof HTMLIFrameElement) {
+                el = el.contentWindow.document.elementFromPoint(x, y);
+            }
+            el.click();
+            setTimeout(function() {tapping = false;}, 200);
             break;
         case "swipe":
             console.log("Swipe Gesture");
@@ -101,6 +160,33 @@ if(frame.valid && frame.gestures.length > 0){
             break;
       }
   });
+}
+if (!tapping && frame.valid && (num % 1) == 0) {
+  if (frame.hands != null && frame.hands.length > 0) {
+    var indexFinger = frame.hands[0].indexFinger;
+    if (indexFinger != null && indexFinger.valid && pointing(frame.hands[0])) {
+      var pos = indexFinger.stabilizedTipPosition;
+      var dip = indexFinger.carpPosition;
+      var dir = [0, 0, 0];
+      var x = 0;
+      while (x < pos.length) {
+        dir[x] = pos[x] - dip[x];
+        x++;
+      }
+      dip = sumVec3(dip, lmpos);
+      var intsct = roundVec3(intersectRayPlane(dip, dir, norm, dist));
+
+      tracker.style.visibility = "visible";
+
+      var vel = indexFinger.tipVelocity;
+      tracker.style.left = Math.min(Math.max(0, Math.min(intsct[0], screenWidth) * widthRatio), widthPx - trackerPx);
+      tracker.style.bottom = Math.min(Math.max(0, Math.min(intsct[1], screenHeight)) * heightRatio, heightPx - trackerPx);
+      //console.log(tracker.style.left);
+    }
+    else {
+      tracker.style.visibility = "hidden";
+    }
+  }
 }
 });
 </script>
