@@ -8,40 +8,27 @@
 </head>
 <body>
   <div id="tracker">
-    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="100" cy="100" r="100"/>
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" width="80px" height="80px" viewBox="0 0 355.747 355.747" style="enable-background:new 0 0 355.747 355.747;" xml:space="preserve">
+    	<path d="M349.243,270.747l-108.709-43.009c-3.707-1.467-7.93-0.592-10.75,2.228c-2.818,2.82-3.693,7.043-2.228,10.75    l43.009,108.71c1.455,3.676,4.938,6.15,8.887,6.313c0.139,0.005,0.277,0.008,0.414,0.008c3.791,0,7.271-2.149,8.963-5.568    l20.236-40.932l40.932-20.235c3.543-1.753,5.723-5.428,5.559-9.377C355.394,275.684,352.919,272.201,349.243,270.747z" fill="#2e5c47"/>
+    	<path d="M167.534,304.014c-75.357,0-136.664-61.306-136.664-136.662S92.177,30.688,167.534,30.688    c75.354,0,136.663,61.307,136.663,136.664c0,16.302-2.875,31.943-8.133,46.453L324.61,225.1    c6.643-18.01,10.273-37.461,10.273-57.748C334.884,75.075,259.812,0,167.533,0C75.254,0,0.183,75.074,0.183,167.352    s75.074,167.351,167.352,167.351c20.285,0,39.738-3.63,57.746-10.272l-11.295-28.548    C199.478,301.141,183.835,304.014,167.534,304.014z" fill="#2e5c47"/>
     </svg>
   </div>
   <div id="myCarousel" class="carousel slide" data-ride="carousel" data-interval="false">
     <!-- Wrapper for slides -->
     <div class="carousel-inner" role="listbox">
       <div class="item active">
+        <iframe width="100%" height="100%" src="events.html" frameborder="0" allowfullscreen=""></iframe>
+      </div>
+      <div class="item">
 				<iframe width="100%" height="100%" src="http://tribehacks.com" frameborder="0" allowfullscreen=""></iframe>
-			</div>
-			<div class="item">
-				<iframe width="100%" height="100%" src="http://wm.acm.org" frameborder="0" allowfullscreen=""></iframe>
 			</div>
 			<div class="item">
 				<iframe width="100%" height="100%" src="http://tribehacks.com/2016/tribeHacksII" frameborder="0" allowfullscreen=""></iframe>
 			</div>
     </div>
   </div>
-  <!-- Indicators -->
-  <div>
-    <ol class="carousel-indicators">
-      <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
-      <li data-target="#myCarousel" data-slide-to="1"></li>
-      <li data-target="#myCarousel" data-slide-to="2"></li>
-    </ol>
-  </div>
 </body>
 
-<script>
-  $(".carousel-indicators li").on('click', function(){
-      $(this).siblings().removeClass('active')
-      $(this).addClass('active');
-  })
-</script>
 <script>
 function roundVec3(vec) {
   var x = 0;
@@ -94,28 +81,31 @@ function pointing(hand) {
     return hand.indexFinger.extended;
 }
 
-var scrollUp = (function () {
-  var timerId; // stored timer in case you want to use clearInterval later
+function tap(tracker) {
+  try {
+    tapping = true;
+    var x = parseInt(tracker.style.left.slice(0, -2));
+    var y = parseInt(tracker.style.top.slice(0, -2));
+    var el = document.elementFromPoint(x, y);
+    if (el instanceof HTMLIFrameElement) {
+        el = el.contentWindow.document.elementFromPoint(x, y);
+    }
+    el.click();
+    setTimeout(function() {tapping = false;}, 100);
+  } catch (err) {
+    tapping = false;
+  }
+}
 
-  return function (height, times, element) {
-    var i = 0; // a simple counter
-    timerId = setInterval(function () {
-      if (i > times) // if the last frame is reached, set counter to zero
-        i = 0;
-      element.style.backgroundPosition = "0px -" + i * height + 'px'; //scroll up
-      i++;
-    }, 10); // every 10 milliseconds
-  };
-})();
-
+// all values in millimeters
 var screenWidth = 350;
 var screenHeight = 230;
 var widthPx = $(window).width();
 var heightPx = $(window).height();
 var widthRatio = widthPx / screenWidth;
 var heightRatio = heightPx / screenHeight;
-var lmpos = [175, 0, 250];
-var norm = [0, 0, 1]
+var lmpos = [175, 0, 250]; // offset of leap device from left bottom corner of monitor, mm [x, y, z]
+var norm = [0, 0, 1] // normal vector to monitor plane
 var dist = 0;
 
 var tracker = document.getElementById("tracker");
@@ -133,18 +123,11 @@ if(frame.valid && frame.gestures.length > 0){
             break;
         case "keyTap":
             console.log("Key Tap Gesture");
+            tap(tracker);
             break;
         case "screenTap":
             console.log("Screen Tap Gesture");
-            tapping = true;
-            var x = parseInt(tracker.style.left.slice(0, -2));
-            var y = parseInt(tracker.style.top.slice(0, -2));
-            var el = document.elementFromPoint(x, y);
-            if (el instanceof HTMLIFrameElement) {
-                el = el.contentWindow.document.elementFromPoint(x, y);
-            }
-            el.click();
-            setTimeout(function() {tapping = false;}, 200);
+            tap(tracker);
             break;
         case "swipe":
             console.log("Swipe Gesture");
@@ -178,7 +161,6 @@ if (!tapping && frame.valid && (num % 1) == 0) {
 
       tracker.style.visibility = "visible";
 
-      var vel = indexFinger.tipVelocity;
       tracker.style.left = Math.min(Math.max(0, Math.min(intsct[0], screenWidth) * widthRatio), widthPx - trackerPx);
       tracker.style.bottom = Math.min(Math.max(0, Math.min(intsct[1], screenHeight)) * heightRatio, heightPx - trackerPx);
       //console.log(tracker.style.left);
